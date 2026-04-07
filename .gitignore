@@ -34,5 +34,9 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
+# Vercel
+.vercel
+
 # OS
 Thumbs.db
+.env*.local
