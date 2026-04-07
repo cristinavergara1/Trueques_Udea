@@ -1,5 +1,8 @@
 # TruequeUdeA 🔄
 
+[![Deploy to Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://trueques-udea.vercel.app)
+[![CI/CD](https://github.com/cristinavergara1/Trueques_Udea/actions/workflows/deploy.yml/badge.svg)](https://github.com/cristinavergara1/Trueques_Udea/actions)
+
 Plataforma de trueques diseñada para estudiantes de la Universidad de Antioquia. Intercambia bienes, servicios y habilidades con la comunidad universitaria sin necesidad de dinero.
 
 ## 🚀 Características
