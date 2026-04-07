@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Mail, Lock } from "lucide-react";
+import { mockLogin, getMockUser } from "../utils/mockAuth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -11,16 +12,26 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!form.correo.endsWith("@udea.edu.co")) {
-      setError("Solo se permiten correos @udea.edu.co");
-      return;
-    }
+    
     setLoading(true);
     // Simulate API call
     await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    navigate("/publicaciones");
+
+    // Use mock authentication
+    const result = mockLogin(form.correo, form.password);
+
+    if (result.success) {
+      // Guardar usuario en localStorage
+      localStorage.setItem("user", JSON.stringify(result.user));
+      setLoading(false);
+      navigate("/publicaciones");
+    } else {
+      setError(result.message || "Credenciales inválidas");
+      setLoading(false);
+    }
   };
+
+  const mockUser = getMockUser();
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
@@ -71,6 +82,14 @@ export default function LoginPage() {
               />
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setForm({ correo: mockUser.email, password: mockUser.password })}
+            className="text-xs text-[#1B6B35] hover:underline text-left bg-blue-50 p-2 rounded"
+          >
+            Usar credenciales de prueba
+          </button>
 
           {error && <p className="text-red-500 text-xs">{error}</p>}
 
