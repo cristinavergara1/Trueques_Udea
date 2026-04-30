@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router";
-import { Home, Plus, Handshake, MessageCircle, LogOut } from "lucide-react";
+import { Home, Handshake, MessageCircle, LogOut, Code, Package, FileText } from "lucide-react";
+import NotificationsDropdown from "./NotificationsDropdown";
 
 interface NavbarProps {
   isAuthenticated?: boolean;
@@ -51,9 +52,9 @@ export default function Navbar({ isAuthenticated = false }: NavbarProps) {
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
-              <Plus size={15} />
-              <span className="hidden sm:inline">Publicar</span>
-            </button>
+              <FileText size={15} />
+              <span className="hidden sm:inline">Publicaciones</span>
+            </button>            
             <button
               onClick={() => navigate("/propuestas")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
@@ -76,9 +77,16 @@ export default function Navbar({ isAuthenticated = false }: NavbarProps) {
               <MessageCircle size={15} />
               <span className="hidden sm:inline">Mensajes</span>
             </button>
-            <div className="w-8 h-8 bg-[#1B6B35] rounded-full flex items-center justify-center text-white text-xs ml-2 cursor-pointer" style={{ fontWeight: 600 }}>
-              MG
+            <div className="ml-2">
+              <NotificationsDropdown />
             </div>
+            <button
+              onClick={() => navigate("/perfil")}
+              className="w-8 h-8 bg-[#1B6B35] rounded-full flex items-center justify-center text-white text-xs ml-2 cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ fontWeight: 600 }}
+            >
+              MG
+            </button>
             <button
               onClick={() => navigate("/")}
               className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors ml-1"
@@ -89,6 +97,13 @@ export default function Navbar({ isAuthenticated = false }: NavbarProps) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/codigo")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <Code size={15} />
+              <span className="hidden sm:inline">Ver código</span>
+            </button>
             <button
               onClick={() => navigate("/login")}
               className="px-4 py-1.5 text-sm text-gray-700 hover:text-[#1B6B35] transition-colors"

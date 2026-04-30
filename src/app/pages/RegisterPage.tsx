@@ -40,7 +40,10 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-8">
       {/* Logo */}
-      <div className="flex flex-col items-center mb-6">
+      <button
+        onClick={() => navigate("/")}
+        className="flex flex-col items-center mb-6 hover:opacity-80 transition-opacity"
+      >
         <div className="w-12 h-12 bg-[#1B6B35] rounded-full flex items-center justify-center mb-3">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 1l4 4-4 4"/>
@@ -50,9 +53,17 @@ export default function RegisterPage() {
           </svg>
         </div>
         <span style={{ fontWeight: 700, fontSize: "1.2rem", color: "#1B6B35" }}>TruequeUdeA</span>
-      </div>
+      </button>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
+        <div className="text-center mb-6">
+          <button
+            onClick={() => navigate("/")}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            ← Volver al inicio
+          </button>
+        </div>
         <h1 className="text-center text-gray-900 text-lg mb-1" style={{ fontWeight: 700 }}>Crear cuenta</h1>
         <p className="text-center text-[#1B6B35] text-sm mb-6">Únete a la comunidad de intercambios UdeA</p>
 

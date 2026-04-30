@@ -1,197 +1,238 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { Image, AlertCircle } from "lucide-react";
+import { Package, Plus, X, Pencil, Trash2, AlertCircle } from "lucide-react";
 import Navbar from "../components/Navbar";
 
-const CATEGORIAS = ["", "Libros", "Tecnología", "Ropa", "Servicios", "Otro"];
-const TIPOS = ["", "Bien", "Servicio", "Habilidad"];
+const CATEGORIAS = ["Libros", "Tecnología", "Ropa", "Servicios", "Otro"];
+const TIPOS = ["Bien", "Servicio", "Habilidad"];
 
-export default function CreatePublicationPage() {
-  const navigate = useNavigate();
+export default function PublicationsPage() {
+  const [publicaciones, setPublicaciones] = useState([
+    {
+      id: 1,
+      titulo: "Calculadora científica Casio",
+      categoria: "Tecnología",
+      tipo: "Bien",
+      descripcion: "En excelente estado, poco uso",
+      condiciones: "Busco libros de matemáticas",
+      imageUrl: "",
+    },
+  ]);
+
+  const [openModal, setOpenModal] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
   const [form, setForm] = useState({
-    titulo: "", categoria: "", tipo: "", descripcion: "", condiciones: "", imageUrl: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!form.titulo.trim()) e.titulo = "El título es requerido";
-    if (!form.categoria) e.categoria = "Selecciona una categoría";
-    if (!form.tipo) e.tipo = "Selecciona el tipo";
-    if (!form.descripcion.trim()) e.descripcion = "La descripción es requerida";
-    if (!form.condiciones.trim()) e.condiciones = "Las condiciones son requeridas";
-    return e;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    setErrors({});
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => navigate("/publicaciones"), 1500);
-  };
-
-  const f = (key: keyof typeof form) => ({
-    value: form[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-      setForm({ ...form, [key]: e.target.value }),
+    titulo: "",
+    categoria: "",
+    tipo: "",
+    descripcion: "",
+    condiciones: "",
+    imageUrl: "",
   });
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-        <div className="text-center">
-          <div className="text-5xl mb-4">🎉</div>
-          <h2 className="text-xl text-gray-900 mb-2" style={{ fontWeight: 700 }}>¡Publicación creada!</h2>
-          <p className="text-gray-500 text-sm">Redirigiendo a publicaciones...</p>
-        </div>
-      </div>
-    );
-  }
+  const openCreate = () => {
+    setForm({
+      titulo: "",
+      categoria: "",
+      tipo: "",
+      descripcion: "",
+      condiciones: "",
+      imageUrl: "",
+    });
+    setEditingId(null);
+    setOpenModal(true);
+  };
+
+  const openEdit = (p: any) => {
+    setForm(p);
+    setEditingId(p.id);
+    setOpenModal(true);
+  };
+
+  const handleSubmit = () => {
+    if (!form.titulo) return;
+
+    if (editingId) {
+      setPublicaciones(prev =>
+        prev.map(p => p.id === editingId ? { ...form, id: editingId } : p)
+      );
+    } else {
+      setPublicaciones(prev => [
+        ...prev,
+        { ...form, id: Date.now() },
+      ]);
+    }
+
+    setOpenModal(false);
+  };
+
+  const handleDelete = (id: number) => {
+    setPublicaciones(prev => prev.filter(p => p.id !== id));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar isAuthenticated />
 
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl text-gray-900" style={{ fontWeight: 700 }}>Crear publicación</h1>
-          <p className="text-sm mt-1">
-            Publica lo que quieres intercambiar con la{" "}
-            <span className="text-[#1B6B35]" style={{ fontWeight: 500 }}>comunidad UdeA</span>
-          </p>
+      <main className="max-w-4xl mx-auto px-4 py-8">
+
+        {/* HEADER */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Mis publicaciones</h1>
+            <p className="text-gray-500 text-sm">Aquí están tus publicaciones</p>
+          </div>
+
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-[#1B6B35] text-white px-4 py-2 rounded-md text-sm"
+          >
+            <Plus size={16} /> Nueva publicación
+          </button>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-[#1B6B35] text-sm mb-0.5" style={{ fontWeight: 600 }}>Información del intercambio</h2>
-          <p className="text-gray-400 text-xs mb-5">Completa todos los campos para crear tu publicación</p>
+        {/* LISTA */}
+        <div className="flex flex-col gap-4">
+          {publicaciones.map((p) => (
+            <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-5 flex justify-between">
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            {/* Título */}
-            <div>
-              <label className="text-sm text-gray-700 mb-1 block" style={{ fontWeight: 500 }}>
-                Título <span className="text-red-500">*</span>
-              </label>
-              <input
-                {...f("titulo")}
-                placeholder="Ej: Calculadora científica en excelente estado"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-md text-sm bg-gray-50 focus:outline-none focus:border-[#1B6B35] focus:ring-1 focus:ring-[#1B6B35]"
-              />
-              {errors.titulo && <p className="text-red-500 text-xs mt-1">{errors.titulo}</p>}
-            </div>
-
-            {/* Categoría + Tipo */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-gray-700 mb-1 block" style={{ fontWeight: 500 }}>
-                  Categoría <span className="text-red-500">*</span>
-                </label>
-                <select
-                  {...f("categoria")}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-md text-sm bg-gray-50 focus:outline-none focus:border-[#1B6B35] text-gray-600"
-                >
-                  <option value="">Selecciona una categoría</option>
-                  {CATEGORIAS.filter(Boolean).map((c) => <option key={c}>{c}</option>)}
-                </select>
-                {errors.categoria && <p className="text-red-500 text-xs mt-1">{errors.categoria}</p>}
+              <div className="flex gap-3">
+                <Package className="text-[#1B6B35]" />
+                <div>
+                  <h3 className="text-sm font-semibold">{p.titulo}</h3>
+                  <p className="text-xs text-gray-500">{p.categoria}</p>
+                  <p className="text-xs text-gray-400">{p.descripcion}</p>
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-gray-700 mb-1 block" style={{ fontWeight: 500 }}>
-                  Tipo <span className="text-red-500">*</span>
-                </label>
-                <select
-                  {...f("tipo")}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-md text-sm bg-gray-50 focus:outline-none focus:border-[#1B6B35] text-gray-600"
-                >
-                  <option value="">Selecciona el tipo</option>
-                  {TIPOS.filter(Boolean).map((t) => <option key={t}>{t}</option>)}
-                </select>
-                {errors.tipo && <p className="text-red-500 text-xs mt-1">{errors.tipo}</p>}
+
+              <div className="flex gap-3">
+                <button onClick={() => openEdit(p)} className="text-blue-600">
+                  <Pencil size={16} />
+                </button>
+                <button onClick={() => handleDelete(p.id)} className="text-red-600">
+                  <Trash2 size={16} />
+                </button>
               </div>
-            </div>
 
-            {/* Descripción */}
-            <div>
-              <label className="text-sm text-gray-700 mb-1 block" style={{ fontWeight: 500 }}>
-                Descripción <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                {...f("descripcion")}
-                rows={4}
-                placeholder="Describe detalladamente lo que ofreces..."
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-md text-sm bg-gray-50 focus:outline-none focus:border-[#1B6B35] focus:ring-1 focus:ring-[#1B6B35] resize-none"
-              />
-              <p className="text-gray-400 text-xs mt-1">Sé específico sobre el estado, características y cualquier detalle relevante</p>
-              {errors.descripcion && <p className="text-red-500 text-xs mt-1">{errors.descripcion}</p>}
             </div>
+          ))}
+        </div>
 
-            {/* Condiciones */}
-            <div>
-              <label className="text-sm text-gray-700 mb-1 block" style={{ fontWeight: 500 }}>
-                Condiciones de intercambio <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                {...f("condiciones")}
-                rows={3}
-                placeholder="¿Qué buscas a cambio? Ej: Libros de matemáticas, clases de inglés, etc."
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-md text-sm bg-gray-50 focus:outline-none focus:border-[#1B6B35] focus:ring-1 focus:ring-[#1B6B35] resize-none"
-              />
-              {errors.condiciones && <p className="text-red-500 text-xs mt-1">{errors.condiciones}</p>}
-            </div>
+      </main>
 
-            {/* URL imagen */}
-            <div>
-              <label className="text-sm text-gray-700 mb-1 block" style={{ fontWeight: 500 }}>
-                URL de imagen <span className="text-gray-400">(opcional)</span>
-              </label>
-              <div className="relative">
-                <Image size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  {...f("imageUrl")}
-                  type="url"
-                  placeholder="https://ejemplo.com/imagen.jpg"
-                  className="w-full pl-8 pr-3 py-2.5 border border-gray-200 rounded-md text-sm bg-gray-50 focus:outline-none focus:border-[#1B6B35] focus:ring-1 focus:ring-[#1B6B35]"
-                />
-              </div>
-              <p className="text-gray-400 text-xs mt-1">Una imagen ayuda a que tu publicación sea más atractiva</p>
-            </div>
+      {/* MODAL */}
+      {openModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
 
-            {/* Aviso */}
-            <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-md px-4 py-3">
-              <AlertCircle size={15} className="text-yellow-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-yellow-800">
-                <span style={{ fontWeight: 600 }}>Recuerda:</span> Esta plataforma es solo para{" "}
-                <span style={{ fontWeight: 600 }}>intercambios</span>. No se permite el uso de{" "}
-                <span className="text-red-600" style={{ fontWeight: 600 }}>dinero</span> en ninguna transacción.
+          <div className="bg-white rounded-xl w-full max-w-2xl p-6 relative border border-gray-200">
+
+            {/* cerrar */}
+            <button
+              onClick={() => setOpenModal(false)}
+              className="absolute top-4 right-4 text-gray-400"
+            >
+              <X size={18} />
+            </button>
+
+            {/* header */}
+            <div className="mb-6">
+              <h2 className="text-xl font-bold">
+                {editingId ? "Editar publicación" : "Crear publicación"}
+              </h2>
+              <p className="text-sm text-gray-500">
+                Publica lo que quieres intercambiar con la comunidad UdeA
               </p>
             </div>
 
-            <div className="flex gap-3 pt-1">
-              <button
-                type="button"
-                onClick={() => navigate("/publicaciones")}
-                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2.5 bg-[#1B6B35] text-white rounded-md text-sm hover:bg-[#155229] transition-colors disabled:opacity-60"
-                style={{ fontWeight: 600 }}
-              >
-                {loading ? "Publicando..." : "Publicar"}
-              </button>
+            {/* FORM */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+
+              <h3 className="text-[#1B6B35] text-sm font-semibold mb-1">
+                Información del intercambio
+              </h3>
+              <p className="text-gray-400 text-xs mb-5">
+                Completa todos los campos
+              </p>
+
+              <div className="flex flex-col gap-5">
+
+                <input
+                  value={form.titulo}
+                  onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                  placeholder="Título"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm"
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <select
+                    value={form.categoria}
+                    onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                    className="px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm"
+                  >
+                    <option value="">Categoría</option>
+                    {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+                  </select>
+
+                  <select
+                    value={form.tipo}
+                    onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+                    className="px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm"
+                  >
+                    <option value="">Tipo</option>
+                    {TIPOS.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+
+                <textarea
+                  value={form.descripcion}
+                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                  placeholder="Descripción"
+                  className="px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm"
+                />
+
+                <textarea
+                  value={form.condiciones}
+                  onChange={(e) => setForm({ ...form, condiciones: e.target.value })}
+                  placeholder="Condiciones"
+                  className="px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm"
+                />
+
+                <input
+                  value={form.imageUrl}
+                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                  placeholder="URL imagen"
+                  className="px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm"
+                />
+
+                {/* aviso */}
+                <div className="flex gap-2 bg-yellow-50 border border-yellow-200 p-3 rounded-md text-xs text-yellow-800">
+                  <AlertCircle size={14} />
+                  No se permite el uso de dinero en intercambios
+                </div>
+
+                {/* botones */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setOpenModal(false)}
+                    className="px-4 py-2 border rounded-md text-sm"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    onClick={handleSubmit}
+                    className="px-4 py-2 bg-[#1B6B35] text-white rounded-md text-sm"
+                  >
+                    {editingId ? "Guardar cambios" : "Publicar"}
+                  </button>
+                </div>
+
+              </div>
             </div>
-          </form>
+
+          </div>
         </div>
-      </main>
+      )}
     </div>
   );
 }
