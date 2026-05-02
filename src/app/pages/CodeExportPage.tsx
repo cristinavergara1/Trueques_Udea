@@ -64,7 +64,7 @@ export const login = (correo: string, password: string) =>
 export const register = (data: {
   nombre: string; apellido: string; correo: string;
   programaAcademico: string; password: string;
-}) => api.post('/auth/register', data);
+}) => api.post('/usuarios/registro', data);
 
 // Publications
 export const getPublications = (params?: {
