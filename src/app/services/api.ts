@@ -42,7 +42,7 @@ api.interceptors.response.use(
 // ========================
 export const authAPI = {
   login: (correo: string, password: string) =>
-    api.post('/auth/login', { correo, password }),
+    api.post('/usuarios/login', { correo, password }),
   
   register: (data: {
     nombre: string;
@@ -50,7 +50,7 @@ export const authAPI = {
     correo: string;
     programaAcademico: string;
     password: string;
-  }) => api.post('/auth/register', data),
+  }) => api.post('/usuarios/registro', data),
 };
 
 // ========================
@@ -64,9 +64,9 @@ export const publicationsAPI = {
     estado?: string;
     page?: number;
     pageSize?: number;
-  }) => api.get('/publicaciones', { params }),
+  }) => api.get('/articulos', { params }),
 
-  getById: (id: number) => api.get(`/publicaciones/${id}`),
+  getById: (id: number) => api.get(`/articulos/${id}`),
 
   create: (data: {
     titulo: string;
@@ -75,11 +75,24 @@ export const publicationsAPI = {
     descripcion: string;
     condicionesIntercambio: string;
     imageUrl?: string;
-  }) => api.post('/publicaciones', data),
+  }) => api.post('/articulos', {
+    titulo: data.titulo,
+    categoria: data.categoria,
+    tipo: data.tipo,
+    descripcion: data.descripcion,
+    condiciones: data.condicionesIntercambio,
+    imagen: data.imageUrl,
+  }),
 
-  update: (id: number, data: any) => api.put(`/publicaciones/${id}`, data),
+  update: (id: number, data: any) =>
+    api.put(`/articulos/${id}`, {
+      ...data,
+      // Normalización de nombres (front usa condicionesIntercambio/imageUrl)
+      condiciones: data.condicionesIntercambio ?? data.condiciones,
+      imagen: data.imageUrl ?? data.imagen,
+    }),
 
-  delete: (id: number) => api.delete(`/publicaciones/${id}`),
+  delete: (id: number) => api.delete(`/articulos/${id}`),
 };
 
 // ========================
