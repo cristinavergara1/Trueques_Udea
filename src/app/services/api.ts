@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configurar la URL base del API
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backendproyectotruequesuninversitarios.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backendproyectotruequesuniversitarios.onrender.com/api';
 
 // Crear instancia de axios
 const api = axios.create({
