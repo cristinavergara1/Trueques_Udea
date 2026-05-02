@@ -35,9 +35,10 @@ export default function RegisterPage() {
       await authAPI.register({
         nombre: form.nombre,
         apellido: form.apellido,
-        correo: form.correo,
+        correo: form.correo.replace(/mailto:|\[|\]|\(|\)/g, ''),
         programaAcademico: form.programa,
         password: form.password,
+        confirmarPassword: form.confirmar,
       });
       
       setSuccessMessage("¡Cuenta creada exitosamente! Redirigiendo a login...");

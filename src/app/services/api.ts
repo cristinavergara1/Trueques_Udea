@@ -41,16 +41,19 @@ api.interceptors.response.use(
 // Auth Endpoints
 // ========================
 export const authAPI = {
-  login: (correo: string, password: string) =>
-    api.post('/usuarios/login', { correo, password }),
-  
-  register: (data: {
-    nombre: string;
-    apellido: string;
-    correo: string;
-    programaAcademico: string;
-    password: string;
-  }) => api.post('/usuarios/registro', data),
+	register: (data: { nombre: string; apellido?: string; correo: string; programaAcademico?: string; password: string; confirmarPassword: string }) =>
+		api.post('/usuarios/registro', {
+			nombre: data.nombre,
+			correo: data.correo,
+			password: data.password,
+			confirmarpassword: data.confirmarPassword,
+			// opcionales, se envían si el frontend las proporciona
+			apellido: data.apellido,
+			programaAcademico: data.programaAcademico,
+		}),
+
+	login: (correo: string, password: string) =>
+		api.post('/usuarios/login', { correo, password }),
 };
 
 // ========================
