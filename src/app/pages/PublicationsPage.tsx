@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Search, Calendar, User, Eye } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -10,7 +10,7 @@ const PUBLICATIONS = [
     categoria: "Tecnología",
     tipo: "Bien",
     descripcion: "Calculadora Casio FX-991 en excelente estado. Perfecta para cálculo e ingeniería.",
-    estado: "Disponible",
+    estado: "disponible",
     usuario: "Carlos Restrepo",
     fecha: "2/4/2026",
     imagen: "https://images.unsplash.com/photo-1694753736023-ddad6cfc8263?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
@@ -21,7 +21,7 @@ const PUBLICATIONS = [
     categoria: "Otro",
     tipo: "Servicio",
     descripcion: "Ofrezco clases particulares de Python nivel básico e intermedio. Tengo experiencia enseñando.",
-    estado: "Disponible",
+    estado: "disponible",
     usuario: "María González",
     fecha: "3/4/2026",
     imagen: "https://images.unsplash.com/photo-1640370287940-6921711c4816?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
@@ -32,7 +32,7 @@ const PUBLICATIONS = [
     categoria: "Libros",
     tipo: "Bien",
     descripcion: "Edición conmemorativa de Cien Años de Soledad de García Márquez. En muy buen estado.",
-    estado: "Disponible",
+    estado: "disponible",
     usuario: "Andrea López",
     fecha: "1/4/2026",
     imagen: "https://images.unsplash.com/photo-1598738865218-7809c17181c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
@@ -43,7 +43,7 @@ const PUBLICATIONS = [
     categoria: "Otro",
     tipo: "Bien",
     descripcion: "Guitarra acústica Yamaha F310, buen estado, con funda. Ideal para principiantes.",
-    estado: "En proceso",
+    estado: "en_proceso",
     usuario: "Pedro Martínez",
     fecha: "4/4/2026",
     imagen: "https://images.unsplash.com/photo-1610620146780-26908fab50ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
@@ -54,7 +54,7 @@ const PUBLICATIONS = [
     categoria: "Ropa",
     tipo: "Bien",
     descripcion: "Mochila ergonómica con compartimento para laptop de 15\". Poco uso, en perfecto estado.",
-    estado: "Disponible",
+    estado: "disponible",
     usuario: "Laura Sánchez",
     fecha: "5/4/2026",
     imagen: "https://images.unsplash.com/photo-1547817752-c23df0357f18?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
@@ -65,7 +65,7 @@ const PUBLICATIONS = [
     categoria: "Servicios",
     tipo: "Servicio",
     descripcion: "Ofrezco tutorías de cálculo diferencial e integral. Estudiante de Ingeniería Matemática.",
-    estado: "Disponible",
+    estado: "disponible",
     usuario: "Santiago Gómez",
     fecha: "6/4/2026",
     imagen: null,
@@ -74,12 +74,26 @@ const PUBLICATIONS = [
 
 const CATEGORIAS = ["Todas las categorías", "Libros", "Tecnología", "Ropa", "Servicios", "Otro"];
 const TIPOS = ["Todos los tipos", "Bien", "Servicio", "Habilidad"];
-const ESTADOS = ["Todos los estados", "Disponible", "En proceso", "Completado"];
+const ESTADOS = [
+  { label: "Todos los estados", value: "all" },
+  { label: "Disponible", value: "disponible" },
+  { label: "En proceso", value: "en_proceso" },
+  { label: "No disponible", value: "intercambiado" }
+];
 
-const ESTADO_COLORS: Record<string, string> = {
-  "Disponible": "bg-green-100 text-green-700",
-  "En proceso": "bg-yellow-100 text-yellow-700",
-  "Completado": "bg-gray-100 text-gray-600",
+const STATUS_UI = {
+  disponible: {
+    label: "Disponible",
+    class: "bg-green-100 text-green-700"
+  },
+  en_proceso: {
+    label: "En proceso",
+    class: "bg-yellow-100 text-yellow-700"
+  },
+  intercambiado: {
+    label: "No disponible",
+    class: "bg-red-100 text-red-700"
+  }
 };
 
 export default function PublicationsPage() {
@@ -87,16 +101,34 @@ export default function PublicationsPage() {
   const [search, setSearch] = useState("");
   const [categoria, setCategoria] = useState("Todas las categorías");
   const [tipo, setTipo] = useState("Todos los tipos");
-  const [estado, setEstado] = useState("Todos los estados");
+  const [estado, setEstado] = useState("all");
 
-  const filtered = PUBLICATIONS.filter((p) => {
-    const matchSearch = p.titulo.toLowerCase().includes(search.toLowerCase()) ||
-      p.descripcion.toLowerCase().includes(search.toLowerCase());
-    const matchCat = categoria === "Todas las categorías" || p.categoria === categoria;
-    const matchTipo = tipo === "Todos los tipos" || p.tipo === tipo;
-    const matchEstado = estado === "Todos los estados" || p.estado === estado;
-    return matchSearch && matchCat && matchTipo && matchEstado;
-  });
+  const [publications, setPublications] = useState(PUBLICATIONS);
+  useEffect(() => {
+    const saved = localStorage.getItem("publications");
+    if (saved) {
+      setPublications(JSON.parse(saved));
+    } else {
+    localStorage.setItem("publications", JSON.stringify(PUBLICATIONS));
+    }
+  }, []);
+
+  const filtered = publications.filter((p) => {
+  const matchSearch =
+    p.titulo.toLowerCase().includes(search.toLowerCase()) ||
+    p.descripcion.toLowerCase().includes(search.toLowerCase());
+
+  const matchCat =
+    categoria === "Todas las categorías" || p.categoria === categoria;
+
+  const matchTipo =
+    tipo === "Todos los tipos" || p.tipo === tipo;
+
+  const matchEstado =
+    estado === "all" || p.estado === estado;
+
+  return matchSearch && matchCat && matchTipo && matchEstado;
+});
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -138,9 +170,12 @@ export default function PublicationsPage() {
             <select
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
-              className="flex-1 min-w-36 px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#1B6B35] bg-white"
             >
-              {ESTADOS.map((s) => <option key={s}>{s}</option>)}
+              {ESTADOS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -161,9 +196,14 @@ export default function PublicationsPage() {
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <h3 className="text-gray-900 text-sm leading-snug" style={{ fontWeight: 600 }}>{pub.titulo}</h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${ESTADO_COLORS[pub.estado]}`} style={{ fontWeight: 500 }}>
-                    {pub.estado}
-                  </span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                      STATUS_UI[pub.estado].class
+                    }`}
+                    style={{ fontWeight: 500 }}
+                  >
+                    {STATUS_UI[pub.estado].label}
+                </span>
                 </div>
                 <div className="flex gap-1.5 mb-2">
                   <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{pub.categoria}</span>
@@ -174,7 +214,11 @@ export default function PublicationsPage() {
                   <span className="flex items-center gap-1"><User size={11} />{pub.usuario}</span>
                   <span className="flex items-center gap-1"><Calendar size={11} />{pub.fecha}</span>
                 </div>
-                <button className="w-full bg-[#1B6B35] text-white py-2 rounded-md text-xs hover:bg-[#155229] transition-colors flex items-center justify-center gap-1.5" style={{ fontWeight: 500 }}>
+                <button
+                  onClick={() => navigate(`/publicaciones/${pub.id}`)}
+                  className="w-full bg-[#1B6B35] text-white py-2 rounded-md text-xs hover:bg-[#155229] transition-colors flex items-center justify-center gap-1.5"
+                  style={{ fontWeight: 500 }}
+                >
                   <Eye size={13} />
                   Ver detalles
                 </button>
