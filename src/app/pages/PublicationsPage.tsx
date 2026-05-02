@@ -1,76 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Search, Calendar, User, Eye } from "lucide-react";
+import { Search, Calendar, User, Eye, Loader } from "lucide-react";
 import Navbar from "../components/Navbar";
-
-const PUBLICATIONS = [
-  {
-    id: 1,
-    titulo: "Calculadora Científica Casio",
-    categoria: "Tecnología",
-    tipo: "Bien",
-    descripcion: "Calculadora Casio FX-991 en excelente estado. Perfecta para cálculo e ingeniería.",
-    estado: "disponible",
-    usuario: "Carlos Restrepo",
-    fecha: "2/4/2026",
-    imagen: "https://images.unsplash.com/photo-1694753736023-ddad6cfc8263?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-  },
-  {
-    id: 2,
-    titulo: "Clases de Programación Python",
-    categoria: "Otro",
-    tipo: "Servicio",
-    descripcion: "Ofrezco clases particulares de Python nivel básico e intermedio. Tengo experiencia enseñando.",
-    estado: "disponible",
-    usuario: "María González",
-    fecha: "3/4/2026",
-    imagen: "https://images.unsplash.com/photo-1640370287940-6921711c4816?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-  },
-  {
-    id: 3,
-    titulo: "Libro: Cien Años de Soledad",
-    categoria: "Libros",
-    tipo: "Bien",
-    descripcion: "Edición conmemorativa de Cien Años de Soledad de García Márquez. En muy buen estado.",
-    estado: "disponible",
-    usuario: "Andrea López",
-    fecha: "1/4/2026",
-    imagen: "https://images.unsplash.com/photo-1598738865218-7809c17181c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-  },
-  {
-    id: 4,
-    titulo: "Guitarra Acústica Yamaha",
-    categoria: "Otro",
-    tipo: "Bien",
-    descripcion: "Guitarra acústica Yamaha F310, buen estado, con funda. Ideal para principiantes.",
-    estado: "en_proceso",
-    usuario: "Pedro Martínez",
-    fecha: "4/4/2026",
-    imagen: "https://images.unsplash.com/photo-1610620146780-26908fab50ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-  },
-  {
-    id: 5,
-    titulo: "Mochila Universitaria",
-    categoria: "Ropa",
-    tipo: "Bien",
-    descripcion: "Mochila ergonómica con compartimento para laptop de 15\". Poco uso, en perfecto estado.",
-    estado: "disponible",
-    usuario: "Laura Sánchez",
-    fecha: "5/4/2026",
-    imagen: "https://images.unsplash.com/photo-1547817752-c23df0357f18?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400",
-  },
-  {
-    id: 6,
-    titulo: "Tutorías de Cálculo Diferencial",
-    categoria: "Servicios",
-    tipo: "Servicio",
-    descripcion: "Ofrezco tutorías de cálculo diferencial e integral. Estudiante de Ingeniería Matemática.",
-    estado: "disponible",
-    usuario: "Santiago Gómez",
-    fecha: "6/4/2026",
-    imagen: null,
-  },
-];
+import { publicationsAPI } from "../services/api";
 
 const CATEGORIAS = ["Todas las categorías", "Libros", "Tecnología", "Ropa", "Servicios", "Otro"];
 const TIPOS = ["Todos los tipos", "Bien", "Servicio", "Habilidad"];
@@ -103,32 +35,46 @@ export default function PublicationsPage() {
   const [tipo, setTipo] = useState("Todos los tipos");
   const [estado, setEstado] = useState("all");
 
-  const [publications, setPublications] = useState(PUBLICATIONS);
+  const [publications, setPublications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Cargar publicaciones al montar
   useEffect(() => {
-    const saved = localStorage.getItem("publications");
-    if (saved) {
-      setPublications(JSON.parse(saved));
-    } else {
-    localStorage.setItem("publications", JSON.stringify(PUBLICATIONS));
-    }
+    loadPublications();
   }, []);
 
+  const loadPublications = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await publicationsAPI.getAll();
+      setPublications(response.data || []);
+    } catch (err: any) {
+      console.error("Error cargando publicaciones:", err);
+      setError("Error al cargar las publicaciones");
+      setPublications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filtered = publications.filter((p) => {
-  const matchSearch =
-    p.titulo.toLowerCase().includes(search.toLowerCase()) ||
-    p.descripcion.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+      p.titulo.toLowerCase().includes(search.toLowerCase()) ||
+      p.descripcion.toLowerCase().includes(search.toLowerCase());
 
-  const matchCat =
-    categoria === "Todas las categorías" || p.categoria === categoria;
+    const matchCat =
+      categoria === "Todas las categorías" || p.categoria === categoria;
 
-  const matchTipo =
-    tipo === "Todos los tipos" || p.tipo === tipo;
+    const matchTipo =
+      tipo === "Todos los tipos" || p.tipo === tipo;
 
-  const matchEstado =
-    estado === "all" || p.estado === estado;
+    const matchEstado =
+      estado === "all" || p.estado === estado;
 
-  return matchSearch && matchCat && matchTipo && matchEstado;
-});
+    return matchSearch && matchCat && matchTipo && matchEstado;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -182,55 +128,71 @@ export default function PublicationsPage() {
 
         <p className="text-sm text-gray-500 mb-4">{filtered.length} resultados</p>
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((pub) => (
-            <div key={pub.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
-              {pub.imagen ? (
-                <img src={pub.imagen} alt={pub.titulo} className="w-full h-44 object-cover" />
-              ) : (
-                <div className="w-full h-44 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-                  <span className="text-4xl">🤝</span>
-                </div>
-              )}
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="text-gray-900 text-sm leading-snug" style={{ fontWeight: 600 }}>{pub.titulo}</h3>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
-                      STATUS_UI[pub.estado].class
-                    }`}
-                    style={{ fontWeight: 500 }}
-                  >
-                    {STATUS_UI[pub.estado].label}
-                </span>
-                </div>
-                <div className="flex gap-1.5 mb-2">
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{pub.categoria}</span>
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{pub.tipo}</span>
-                </div>
-                <p className="text-gray-500 text-xs leading-relaxed mb-3 line-clamp-2">{pub.descripcion}</p>
-                <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
-                  <span className="flex items-center gap-1"><User size={11} />{pub.usuario}</span>
-                  <span className="flex items-center gap-1"><Calendar size={11} />{pub.fecha}</span>
-                </div>
-                <button
-                  onClick={() => navigate(`/publicaciones/${pub.id}`)}
-                  className="w-full bg-[#1B6B35] text-white py-2 rounded-md text-xs hover:bg-[#155229] transition-colors flex items-center justify-center gap-1.5"
-                  style={{ fontWeight: 500 }}
-                >
-                  <Eye size={13} />
-                  Ver detalles
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Mensaje de error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-4 rounded-md mb-6">
+            {error}
+            <button onClick={loadPublications} className="ml-2 text-red-700 underline">
+              Reintentar
+            </button>
+          </div>
+        )}
 
-        {filtered.length === 0 && (
+        {/* Loading */}
+        {loading ? (
+          <div className="text-center py-16">
+            <Loader size={32} className="animate-spin text-[#1B6B35] mx-auto mb-3" />
+            <p className="text-gray-500">Cargando publicaciones...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <p className="text-4xl mb-3">🔍</p>
             <p className="text-sm">No se encontraron publicaciones con esos filtros.</p>
+          </div>
+        ) : (
+          /* Cards Grid */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filtered.map((pub) => (
+              <div key={pub.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+                {pub.imagen ? (
+                  <img src={pub.imagen} alt={pub.titulo} className="w-full h-44 object-cover" />
+                ) : (
+                  <div className="w-full h-44 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+                    <span className="text-4xl">🤝</span>
+                  </div>
+                )}
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="text-gray-900 text-sm leading-snug" style={{ fontWeight: 600 }}>{pub.titulo}</h3>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                        STATUS_UI[pub.estado]?.class || "bg-gray-100 text-gray-700"
+                      }`}
+                      style={{ fontWeight: 500 }}
+                    >
+                      {STATUS_UI[pub.estado]?.label || pub.estado}
+                  </span>
+                  </div>
+                  <div className="flex gap-1.5 mb-2">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{pub.categoria}</span>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{pub.tipo}</span>
+                  </div>
+                  <p className="text-gray-500 text-xs leading-relaxed mb-3 line-clamp-2">{pub.descripcion}</p>
+                  <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                    <span className="flex items-center gap-1"><User size={11} />{pub.usuario?.nombre || "Usuario"}</span>
+                    <span className="flex items-center gap-1"><Calendar size={11} />{new Date(pub.fechaCreacion).toLocaleDateString()}</span>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/publicaciones/${pub.id}`)}
+                    className="w-full bg-[#1B6B35] text-white py-2 rounded-md text-xs hover:bg-[#155229] transition-colors flex items-center justify-center gap-1.5"
+                    style={{ fontWeight: 500 }}
+                  >
+                    <Eye size={13} />
+                    Ver detalles
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>

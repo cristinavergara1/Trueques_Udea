@@ -1,0 +1,148 @@
+import axios from 'axios';
+
+// Configurar la URL base del API
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backendproyectotruequesuninversitarios.onrender.com/api';
+
+// Crear instancia de axios
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para agregar el token JWT a todas las solicitudes
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Interceptor para manejar errores de respuesta
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expirado o inválido
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ========================
+// Auth Endpoints
+// ========================
+export const authAPI = {
+  login: (correo: string, password: string) =>
+    api.post('/auth/login', { correo, password }),
+  
+  register: (data: {
+    nombre: string;
+    apellido: string;
+    correo: string;
+    programaAcademico: string;
+    password: string;
+  }) => api.post('/auth/register', data),
+};
+
+// ========================
+// Publications Endpoints
+// ========================
+export const publicationsAPI = {
+  getAll: (params?: {
+    search?: string;
+    categoria?: string;
+    tipo?: string;
+    estado?: string;
+    page?: number;
+    pageSize?: number;
+  }) => api.get('/publicaciones', { params }),
+
+  getById: (id: number) => api.get(`/publicaciones/${id}`),
+
+  create: (data: {
+    titulo: string;
+    categoria: string;
+    tipo: string;
+    descripcion: string;
+    condicionesIntercambio: string;
+    imageUrl?: string;
+  }) => api.post('/publicaciones', data),
+
+  update: (id: number, data: any) => api.put(`/publicaciones/${id}`, data),
+
+  delete: (id: number) => api.delete(`/publicaciones/${id}`),
+};
+
+// ========================
+// Proposals Endpoints
+// ========================
+export const proposalsAPI = {
+  getAll: () => api.get('/propuestas'),
+
+  getById: (id: number) => api.get(`/propuestas/${id}`),
+
+  create: (publicacionId: number, mensaje: string) =>
+    api.post('/propuestas', { publicacionId, mensaje }),
+
+  update: (id: number, estado: 'aceptada' | 'rechazada' | 'pendiente') =>
+    api.put(`/propuestas/${id}`, { estado }),
+
+  delete: (id: number) => api.delete(`/propuestas/${id}`),
+};
+
+// ========================
+// Messages Endpoints
+// ========================
+export const messagesAPI = {
+  getConversations: () => api.get('/mensajes/conversaciones'),
+
+  getMessages: (userId: number) => api.get(`/mensajes/${userId}`),
+
+  send: (destinatarioId: number, contenido: string) =>
+    api.post('/mensajes', { destinatarioId, contenido }),
+};
+
+// ========================
+// User Endpoints
+// ========================
+export const userAPI = {
+  getProfile: () => api.get('/usuarios/perfil'),
+
+  updateProfile: (data: any) => api.put('/usuarios/perfil', data),
+
+  getById: (id: number) => api.get(`/usuarios/${id}`),
+};
+
+// ========================
+// Reviews/Ratings Endpoints
+// ========================
+export const reviewsAPI = {
+  create: (usuarioId: number, calificacion: number, comentario: string) =>
+    api.post('/resenas', { usuarioId, calificacion, comentario }),
+
+  getByUser: (usuarioId: number) => api.get(`/resenas/usuario/${usuarioId}`),
+};
+
+// ========================
+// Reports Endpoints
+// ========================
+export const reportsAPI = {
+  create: (publicacionId: number, motivo: string, descripcion: string) =>
+    api.post('/reportes', { publicacionId, motivo, descripcion }),
+
+  getAll: () => api.get('/reportes'),
+
+  update: (id: number, estado: string) =>
+    api.put(`/reportes/${id}`, { estado }),
+};
+
+export default api;

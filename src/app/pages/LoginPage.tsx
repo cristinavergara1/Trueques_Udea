@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Mail, Lock } from "lucide-react";
+import { authAPI } from "../services/api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -16,10 +17,17 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    navigate("/publicaciones");
+    try {
+      const response = await authAPI.login(form.correo, form.password);
+      // Guardar token y usuario en localStorage
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.usuario));
+      navigate("/publicaciones");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al iniciar sesión");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

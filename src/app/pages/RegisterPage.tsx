@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Mail, Lock, User, BookOpen } from "lucide-react";
+import { authAPI } from "../services/api";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ export default function RegisterPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -26,10 +28,29 @@ export default function RegisterPage() {
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
+    setSuccessMessage("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setLoading(false);
-    navigate("/publicaciones");
+    
+    try {
+      await authAPI.register({
+        nombre: form.nombre,
+        apellido: form.apellido,
+        correo: form.correo,
+        programaAcademico: form.programa,
+        password: form.password,
+      });
+      
+      setSuccessMessage("¡Cuenta creada exitosamente! Redirigiendo a login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+      
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || "Error al crear la cuenta";
+      setErrors({ submit: errorMsg });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const field = (key: keyof typeof form) => ({
@@ -68,6 +89,19 @@ export default function RegisterPage() {
         <p className="text-center text-[#1B6B35] text-sm mb-6">Únete a la comunidad de intercambios UdeA</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Mensaje de error general */}
+          {errors.submit && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-md">
+              {errors.submit}
+            </div>
+          )}
+
+          {/* Mensaje de éxito */}
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-600 text-xs p-3 rounded-md">
+              {successMessage}
+            </div>
+          )}
           {/* Nombre + Apellido */}
           <div className="grid grid-cols-2 gap-3">
             <div>
