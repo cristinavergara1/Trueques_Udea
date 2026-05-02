@@ -85,6 +85,7 @@ export const publicationsAPI = {
     descripcion: data.descripcion,
     condiciones: data.condicionesIntercambio,
     imagen: data.imageUrl,
+    usuarioId: JSON.parse(localStorage.getItem('user') || '{}')?.id
   }),
 
   update: (id: number, data: any) =>
