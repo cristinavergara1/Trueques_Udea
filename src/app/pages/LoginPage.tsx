@@ -20,16 +20,21 @@ export default function LoginPage() {
     try {
       const response = await authAPI.login(form.correo, form.password);
   // Guardar token y usuario en localStorage (evita guardar "undefined")
-  const token = response.data?.token ?? response.data?.accessToken;
+  const data = response.data;
+  const token = data?.token ?? data?.accessToken;
 
-  // Algunos backends envuelven la respuesta (data/response/usuario)
+  // Backends soportados:
+  // 1) { token, usuario }
+  // 2) { token, user }
+  // 3) usuario directo: { id, nombre, ... }
   const user =
-    response.data?.usuario ??
-    response.data?.user ??
-    response.data?.data?.usuario ??
-    response.data?.data?.user ??
-    response.data?.response?.usuario ??
-    response.data?.response?.user;
+    data?.usuario ??
+    data?.user ??
+    data?.data?.usuario ??
+    data?.data?.user ??
+    data?.response?.usuario ??
+    data?.response?.user ??
+    (data?.id ? data : undefined);
 
   if (token) localStorage.setItem("token", String(token));
   if (user) localStorage.setItem("user", JSON.stringify(user));
