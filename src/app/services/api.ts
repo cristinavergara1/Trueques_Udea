@@ -78,15 +78,33 @@ export const publicationsAPI = {
     descripcion: string;
     condicionesIntercambio: string;
     imageUrl?: string;
-  }) => api.post('/articulos', {
+  }) => {
+    const rawUser = localStorage.getItem('user');
+    let userId: number | undefined;
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        const id = parsed?.id;
+        if (typeof id === 'number') userId = id;
+        else if (typeof id === 'string' && id.trim() && !Number.isNaN(Number(id))) userId = Number(id);
+      } catch {
+        // ignore: user mal guardado
+      }
+    }
+
+    const payload: any = {
     titulo: data.titulo,
     categoria: data.categoria,
     tipo: data.tipo,
     descripcion: data.descripcion,
     condiciones: data.condicionesIntercambio,
     imagen: data.imageUrl,
-    usuarioId: JSON.parse(localStorage.getItem('user') || '{}')?.id
-  }),
+    };
+
+    if (userId !== undefined) payload.usuarioId = userId;
+
+    return api.post('/articulos', payload);
+  },
 
   update: (id: number, data: any) =>
     api.put(`/articulos/${id}`, {
