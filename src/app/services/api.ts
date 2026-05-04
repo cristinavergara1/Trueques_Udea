@@ -94,7 +94,13 @@ export const publicationsAPI = {
 
     if (userId === undefined) {
       // Evita enviar un payload inválido que hace fallar el backend (500)
-      return Promise.reject(new Error('No hay usuario autenticado (user.id no encontrado). Inicia sesión nuevamente.'));
+      return Promise.reject({
+        response: {
+          data: {
+            message: 'No hay usuario autenticado (user.id no encontrado). Inicia sesión nuevamente.',
+          },
+        },
+      });
     }
 
     const payload: any = {
@@ -104,7 +110,7 @@ export const publicationsAPI = {
     descripcion: data.descripcion,
     condiciones: data.condicionesIntercambio,
     imagen: data.imageUrl,
-      usuarioId: userId,
+    usuarioId: userId,
     };
 
     return api.post('/articulos', payload);
