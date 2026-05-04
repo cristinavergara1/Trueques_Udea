@@ -46,7 +46,9 @@ export const authAPI = {
 			nombre: data.nombre,
 			correo: data.correo,
 			password: data.password,
-			confirmarpassword: data.confirmarPassword,
+      // compatibilidad: algunos backends esperan camelCase, otros minúscula
+      confirmarPassword: data.confirmarPassword,
+      confirmarpassword: data.confirmarPassword,
 			// opcionales, se envían si el frontend las proporciona
 			apellido: data.apellido,
 			programaAcademico: data.programaAcademico,

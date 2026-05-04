@@ -21,10 +21,24 @@ export default function LoginPage() {
       const response = await authAPI.login(form.correo, form.password);
   // Guardar token y usuario en localStorage (evita guardar "undefined")
   const token = response.data?.token ?? response.data?.accessToken;
-  const user = response.data?.usuario ?? response.data?.user;
+
+  // Algunos backends envuelven la respuesta (data/response/usuario)
+  const user =
+    response.data?.usuario ??
+    response.data?.user ??
+    response.data?.data?.usuario ??
+    response.data?.data?.user ??
+    response.data?.response?.usuario ??
+    response.data?.response?.user;
 
   if (token) localStorage.setItem("token", String(token));
   if (user) localStorage.setItem("user", JSON.stringify(user));
+
+  // Si el backend no devuelve el usuario, como mínimo deja un objeto para no romper flujo.
+  // (Ideal: backend devuelva usuario con id)
+  if (!user) {
+    localStorage.removeItem("user");
+  }
       navigate("/publicaciones");
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al iniciar sesión");
