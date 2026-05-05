@@ -28,6 +28,13 @@ const STATUS_UI = {
   }
 };
 
+function formatDateSafe(value: unknown) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("es-CO");
+}
+
 export default function PublicationsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -179,8 +186,12 @@ export default function PublicationsPage() {
                   </div>
                   <p className="text-gray-500 text-xs leading-relaxed mb-3 line-clamp-2">{pub.descripcion}</p>
                   <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
-                    <span className="flex items-center gap-1"><User size={11} />{pub.usuario?.nombre || "Usuario"}</span>
-                    <span className="flex items-center gap-1"><Calendar size={11} />{new Date(pub.fechaCreacion).toLocaleDateString()}</span>
+                    <span className="flex items-center gap-1"><User size={11} />{pub.nombreUsuario || pub.usuario?.nombre || "Usuario"}</span>
+                    {formatDateSafe(pub.fechaCreacion) ? (
+                      <span className="flex items-center gap-1"><Calendar size={11} />{formatDateSafe(pub.fechaCreacion)}</span>
+                    ) : (
+                      <span className="flex items-center gap-1"><Calendar size={11} />—</span>
+                    )}
                   </div>
                   <button
                     onClick={() => navigate(`/publicaciones/${pub.id}`)}
