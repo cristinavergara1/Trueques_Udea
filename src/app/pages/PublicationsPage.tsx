@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Search, Calendar, User, Eye, Loader } from "lucide-react";
+import { Search, User, Eye, Loader } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { publicationsAPI } from "../services/api";
 
@@ -188,9 +188,9 @@ export default function PublicationsPage() {
                   <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
                     <span className="flex items-center gap-1"><User size={11} />{pub.nombreUsuario || pub.usuario?.nombre || "Usuario"}</span>
                     {formatDateSafe(pub.fechaCreacion) ? (
-                      <span className="flex items-center gap-1"><Calendar size={11} />{formatDateSafe(pub.fechaCreacion)}</span>
+                      <span>{formatDateSafe(pub.fechaCreacion)}</span>
                     ) : (
-                      <span className="flex items-center gap-1"><Calendar size={11} />—</span>
+                      <span>—</span>
                     )}
                   </div>
                   <button
