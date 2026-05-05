@@ -1,26 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Star, Package, CheckCircle, TrendingUp, Flag } from "lucide-react";
 import Navbar from "../components/Navbar";
 import ReportModal from "../components/ReportModal";
 
-const USER_STATS = {
-  nombre: "María González",
-  programa: "Ingeniería de Sistemas",
-  email: "maria.gonzalez@udea.edu.co",
-  miembro_desde: "Enero 2026",
-  totalIntercambios: 15,
-  intercambiosCompletados: 12,
-  calificacionPromedio: 4.7,
-  calificaciones: [
-    { id: 1, de: "Juan Pérez", estrellas: 5, comentario: "Excelente intercambio, muy responsable y puntual.", fecha: "15/4/2026" },
-    { id: 2, de: "Carlos Restrepo", estrellas: 5, comentario: "Todo perfecto, muy recomendada!", fecha: "10/4/2026" },
-    { id: 3, de: "Andrea López", estrellas: 4, comentario: "Buena experiencia, artículo en buen estado.", fecha: "5/4/2026" },
-    { id: 4, de: "Pedro Martínez", estrellas: 5, comentario: "Súper atenta y el intercambio fue rápido.", fecha: "1/4/2026" },
-  ],
-};
+const API = "https://backendproyectotruequesuniversitarios.onrender.com";
 
 export default function ProfilePage() {
+
+  const [user, setUser] = useState(null);
+  const [stats, setStats] = useState(null);
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = storedUser?.id || storedUser?.usuario?.id;
+
+  // Usuario
+  useEffect(() => {
+    if (!userId) return;
+
+    fetch(`${API}/api/usuarios/${userId}`)
+      .then(res => res.json())
+      .then(data => setUser(data))
+      .catch(err => console.error(err));
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    fetch(`${API}/api/usuarios/${userId}/estadisticas`)
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(err => console.error(err));
+  }, [userId]);
+
   const [reportModal, setReportModal] = useState(false);
+
+  const mockRatings = [ { id: 1, de: "Juan Pérez", estrellas: 5, comentario: "Excelente intercambio", fecha: "2026-04-20" }, { id: 2, de: "Laura Gómez", estrellas: 4, comentario: "Todo bien, recomendado", fecha: "2026-04-18" } ];
+
+  if (!userId) return <p>No hay usuario logueado</p>;
+  if (!user || !stats) return <p>Cargando...</p>;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -36,11 +52,11 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h1 className="text-xl text-gray-900 mb-1" style={{ fontWeight: 700 }}>
-                  {USER_STATS.nombre}
+                  {user?.nombre}
                 </h1>
-                <p className="text-sm text-gray-500 mb-1">{USER_STATS.programa}</p>
-                <p className="text-xs text-gray-400">{USER_STATS.email}</p>
-                <p className="text-xs text-gray-400 mt-1">Miembro desde {USER_STATS.miembro_desde}</p>
+                <p className="text-sm text-gray-500 mb-1">{user?.programa}</p>
+                <p className="text-xs text-gray-400">{user?.correo}</p>
+                <p className="text-xs text-gray-400 mt-1">Miembro desde {user?.miembro_desde}</p>
               </div>
             </div>
             <button
@@ -64,7 +80,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-2xl text-gray-900" style={{ fontWeight: 700 }}>
-                    {USER_STATS.totalIntercambios}
+                    {stats.totalIntercambios}
                   </p>
                   <p className="text-xs text-gray-500">Total intercambios</p>
                 </div>
@@ -78,7 +94,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-2xl text-gray-900" style={{ fontWeight: 700 }}>
-                    {USER_STATS.intercambiosCompletados}
+                    {stats.intercambiosCompletados}
                   </p>
                   <p className="text-xs text-gray-500">Completados</p>
                 </div>
@@ -92,7 +108,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-2xl text-gray-900" style={{ fontWeight: 700 }}>
-                    {USER_STATS.calificacionPromedio}
+                    {stats.calificacionPromedio}
                   </p>
                   <p className="text-xs text-gray-500">Calificación promedio</p>
                 </div>
@@ -102,35 +118,41 @@ export default function ProfilePage() {
         </div>
 
         {/* Ratings */}
-        <div>
-          <h2 className="text-lg text-gray-900 mb-3" style={{ fontWeight: 700 }}>
-            Calificaciones recibidas ({USER_STATS.calificaciones.length})
-          </h2>
-          <div className="flex flex-col gap-3">
-            {USER_STATS.calificaciones.map((cal) => (
-              <div key={cal.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <p className="text-sm text-gray-900" style={{ fontWeight: 600 }}>{cal.de}</p>
-                    <div className="flex gap-0.5 mt-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          size={14}
-                          fill={i < cal.estrellas ? "#F2A900" : "none"}
-                          stroke={i < cal.estrellas ? "#F2A900" : "#D1D5DB"}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-400">{cal.fecha}</span>
-                </div>
-                {cal.comentario && (
-                  <p className="text-sm text-gray-600 leading-relaxed">{cal.comentario}</p>
-                )}
-              </div>
-            ))}
-          </div>
+        <div> 
+          <h2 className="text-lg text-gray-900 mb-3"> 
+            Calificaciones recibidas ({mockRatings.length}) 
+          </h2>           
+          <div className="flex flex-col gap-3"> 
+            {mockRatings.map((cal) => ( 
+              <div key={cal.id} className="bg-white border border-gray-200 rounded-xl p-4"> 
+                <div className="flex items-start justify-between gap-3 mb-2"> 
+                  <div> 
+                    <p className="text-sm text-gray-900 font-semibold"> 
+                      {cal.de} 
+                    </p> 
+                    <div className="flex gap-0.5 mt-1"> 
+                      {[...Array(5)].map((_, i) => ( 
+                        <Star 
+                          key={i} 
+                          size={14} 
+                          fill={i < cal.estrellas ? "#F2A900" : "none"} 
+                          stroke={i < cal.estrellas ? "#F2A900" : "#D1D5DB"} 
+                        /> 
+                      ))} 
+                    </div> 
+                  </div> 
+                  <span className="text-xs text-gray-400"> 
+                    {cal.fecha} 
+                  </span> 
+                </div> 
+                {cal.comentario && ( 
+                  <p className="text-sm text-gray-600"> 
+                    {cal.comentario} 
+                  </p> 
+                )} 
+              </div> 
+            ))} 
+          </div> 
         </div>
       </main>
 
@@ -138,7 +160,7 @@ export default function ProfilePage() {
         isOpen={reportModal}
         onClose={() => setReportModal(false)}
         tipo="usuario"
-        targetName={USER_STATS.nombre}
+        targetName={user?.nombre}
       />
     </div>
   );
