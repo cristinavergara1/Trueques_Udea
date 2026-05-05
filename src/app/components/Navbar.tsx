@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from "react-router";
 import { Home, Handshake, MessageCircle, LogOut, Code, Package, FileText } from "lucide-react";
 import NotificationsDropdown from "./NotificationsDropdown";
+import { getUserInitials } from "../utils/getUserInitials";
 
 interface NavbarProps {
   isAuthenticated?: boolean;
@@ -9,6 +10,9 @@ interface NavbarProps {
 export default function Navbar({ isAuthenticated = false }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}") as any;
+  const avatarInitials = getUserInitials(storedUser?.usuario ?? storedUser);
 
   const isActive = (path: string) => location.pathname === path;
   const hideCodeButton = location.pathname === "/";
@@ -86,7 +90,7 @@ export default function Navbar({ isAuthenticated = false }: NavbarProps) {
               className="w-8 h-8 bg-[#1B6B35] rounded-full flex items-center justify-center text-white text-xs ml-2 cursor-pointer hover:opacity-80 transition-opacity"
               style={{ fontWeight: 600 }}
             >
-              MG
+              {avatarInitials}
             </button>
             <button
               onClick={() => navigate("/")}

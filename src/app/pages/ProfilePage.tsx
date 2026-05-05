@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Star, Package, CheckCircle, TrendingUp, Flag } from "lucide-react";
 import Navbar from "../components/Navbar";
 import ReportModal from "../components/ReportModal";
+import { getUserInitials } from "../utils/getUserInitials";
 
 const API = "https://backendproyectotruequesuniversitarios.onrender.com";
 
@@ -48,7 +49,7 @@ export default function ProfilePage() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="w-20 h-20 bg-[#1B6B35] rounded-full flex items-center justify-center text-white text-2xl flex-shrink-0" style={{ fontWeight: 600 }}>
-                MG
+                {getUserInitials(user)}
               </div>
               <div>
                 <h1 className="text-xl text-gray-900 mb-1" style={{ fontWeight: 700 }}>
