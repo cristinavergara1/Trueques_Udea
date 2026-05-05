@@ -84,16 +84,6 @@ export default function LandingPage() {
           Crear cuenta gratis
         </button>
       </section>
-
-      {/* Dev link */}
-      <div className="text-center py-4 bg-gray-50 border-t border-gray-200">
-        <button
-          onClick={() => navigate("/codigo")}
-          className="text-xs text-gray-400 hover:text-[#1B6B35] transition-colors underline"
-        >
-          📄 Ver código fuente (Next.js + Java Spring Boot)
-        </button>
-      </div>
     </div>
   );
 }

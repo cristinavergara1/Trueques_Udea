@@ -11,6 +11,7 @@ export default function Navbar({ isAuthenticated = false }: NavbarProps) {
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
+  const hideCodeButton = location.pathname === "/";
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -97,13 +98,15 @@ export default function Navbar({ isAuthenticated = false }: NavbarProps) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/codigo")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-500 hover:bg-gray-100 transition-colors"
-            >
-              <Code size={15} />
-              <span className="hidden sm:inline">Ver código</span>
-            </button>
+            {!hideCodeButton && (
+              <button
+                onClick={() => navigate("/codigo")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                <Code size={15} />
+                <span className="hidden sm:inline">Ver código</span>
+              </button>
+            )}
             <button
               onClick={() => navigate("/login")}
               className="px-4 py-1.5 text-sm text-gray-700 hover:text-[#1B6B35] transition-colors"
