@@ -16,6 +16,12 @@ function getCurrentUser() {
     const parsed = JSON.parse(rawUser);
     const rawId = parsed?.id ?? parsed?.idUsuario ?? parsed?.userId;
     const id = Number(rawId);
+    const nombre =
+      typeof parsed?.nombre === "string"
+        ? parsed.nombre
+        : typeof parsed?.usuario?.nombre === "string"
+          ? parsed.usuario.nombre
+          : "";
     const correo =
       typeof parsed?.correo === "string"
         ? parsed.correo
@@ -27,6 +33,7 @@ function getCurrentUser() {
 
     return {
       id: Number.isNaN(id) ? null : id,
+      nombre,
       correo,
     };
   } catch {
@@ -34,12 +41,13 @@ function getCurrentUser() {
   }
 }
 
-function isOwnPublication(publication: any, currentUser: { id: number | null; correo: string } | null) {
+function isOwnPublication(publication: any, currentUser: { id: number | null; nombre: string; correo: string } | null) {
   if (!currentUser) return false;
 
   const publicationUser = publication?.usuario;
   const publicationUserId = publication?.usuarioId ?? publicationUser?.id;
   const publicationUserCorreo = publicationUser?.correo;
+  const publicationUserNombre = publication?.nombreUsuario ?? publicationUser?.nombre;
 
   const matchesId =
     currentUser.id !== null &&
@@ -51,19 +59,25 @@ function isOwnPublication(publication: any, currentUser: { id: number | null; co
     typeof publicationUserCorreo === "string" &&
     publicationUserCorreo.toLowerCase() === currentUser.correo.toLowerCase();
 
-  return matchesId || matchesCorreo;
+  const matchesNombre =
+    currentUser.nombre !== "" &&
+    typeof publicationUserNombre === "string" &&
+    publicationUserNombre.toLowerCase() === currentUser.nombre.toLowerCase();
+
+  return matchesId || matchesCorreo || matchesNombre;
 }
 
-function getPublicationsCacheKey(currentUser: { id: number | null; correo: string } | null) {
+function getPublicationsCacheKey(currentUser: { id: number | null; nombre: string; correo: string } | null) {
   if (!currentUser) return null;
 
   const emailKey = currentUser.correo ? currentUser.correo.toLowerCase() : "sin-correo";
+  const nameKey = currentUser.nombre ? currentUser.nombre.toLowerCase() : "sin-nombre";
   const idKey = currentUser.id !== null ? String(currentUser.id) : "sin-id";
 
-  return `my-publications:${idKey}:${emailKey}`;
+  return `my-publications:${idKey}:${emailKey}:${nameKey}`;
 }
 
-function readCachedPublications(currentUser: { id: number | null; correo: string } | null) {
+function readCachedPublications(currentUser: { id: number | null; nombre: string; correo: string } | null) {
   const cacheKey = getPublicationsCacheKey(currentUser);
   if (!cacheKey) return [];
 
@@ -77,7 +91,7 @@ function readCachedPublications(currentUser: { id: number | null; correo: string
   }
 }
 
-function saveCachedPublications(currentUser: { id: number | null; correo: string } | null, publications: any[]) {
+function saveCachedPublications(currentUser: { id: number | null; nombre: string; correo: string } | null, publications: any[]) {
   const cacheKey = getPublicationsCacheKey(currentUser);
   if (!cacheKey) return;
 
@@ -216,7 +230,8 @@ export default function CreatePublicationPage() {
           imageUrl: form.imageUrl,
           imagen: response?.data?.imagen ?? form.imageUrl,
           estado: response?.data?.estado ?? "Disponible",
-          usuario: response?.data?.usuario ?? (currentUser ? { id: currentUser.id, correo: currentUser.correo } : undefined),
+          nombreUsuario: response?.data?.nombreUsuario ?? currentUser?.nombre ?? undefined,
+          usuario: response?.data?.usuario ?? (currentUser ? { id: currentUser.id, nombre: currentUser.nombre, correo: currentUser.correo } : undefined),
           usuarioId: response?.data?.usuarioId ?? currentUser?.id ?? undefined,
         };
 
