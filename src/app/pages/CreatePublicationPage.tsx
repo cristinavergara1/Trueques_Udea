@@ -198,7 +198,7 @@ export default function CreatePublicationPage() {
     try {
       if (editingId) {
         // Editar
-        await publicationsAPI.update(editingId, {
+        const response = await publicationsAPI.update(editingId, {
           titulo: form.titulo,
           categoria: form.categoria,
           tipo: form.tipo,
@@ -207,6 +207,29 @@ export default function CreatePublicationPage() {
           imageUrl: form.imageUrl,
         });
         setSuccess("Publicación actualizada exitosamente");
+
+        // Actualizar la lista local y la caché para que el cambio se vea inmediatamente
+        const currentUser = getCurrentUser();
+        const serverData = response?.data || {};
+        const updatedPublication = {
+          ...(serverData || {}),
+          id: editingId,
+          titulo: form.titulo,
+          categoria: form.categoria,
+          tipo: form.tipo,
+          descripcion: form.descripcion,
+          condiciones: serverData?.condiciones ?? form.condicionesIntercambio,
+          imagen: serverData?.imagen ?? form.imageUrl,
+          imageUrl: serverData?.imageUrl ?? form.imageUrl,
+          estado: serverData?.estado ?? "Disponible",
+          nombreUsuario: serverData?.nombreUsuario ?? currentUser?.nombre,
+          usuario: serverData?.usuario ?? (currentUser ? { id: currentUser.id, nombre: currentUser.nombre, correo: currentUser.correo } : undefined),
+          usuarioId: serverData?.usuarioId ?? currentUser?.id ?? undefined,
+        };
+
+        const nextPublications = mergePublications([updatedPublication], publicaciones);
+        setPublicaciones(nextPublications);
+        saveCachedPublications(currentUser, nextPublications);
       } else {
         // Crear
         const response = await publicationsAPI.create({
