@@ -7,6 +7,45 @@ import { publicationsAPI } from "../services/api";
 const CATEGORIAS = ["Libros", "Tecnología", "Ropa", "Servicios", "Otro"];
 const TIPOS = ["Bien", "Servicio", "Habilidad"];
 
+function getCurrentUser() {
+  const rawUser = localStorage.getItem("user");
+
+  if (!rawUser) return null;
+
+  try {
+    const parsed = JSON.parse(rawUser);
+    const id = Number(parsed?.id);
+    const correo = typeof parsed?.correo === "string" ? parsed.correo : "";
+
+    return {
+      id: Number.isNaN(id) ? null : id,
+      correo,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isOwnPublication(publication: any, currentUser: { id: number | null; correo: string } | null) {
+  if (!currentUser) return false;
+
+  const publicationUser = publication?.usuario;
+  const publicationUserId = publication?.usuarioId ?? publicationUser?.id;
+  const publicationUserCorreo = publicationUser?.correo;
+
+  const matchesId =
+    currentUser.id !== null &&
+    publicationUserId !== undefined &&
+    Number(publicationUserId) === currentUser.id;
+
+  const matchesCorreo =
+    currentUser.correo !== "" &&
+    typeof publicationUserCorreo === "string" &&
+    publicationUserCorreo.toLowerCase() === currentUser.correo.toLowerCase();
+
+  return matchesId || matchesCorreo;
+}
+
 export default function CreatePublicationPage() {
   const navigate = useNavigate();
   const [publicaciones, setPublicaciones] = useState<any[]>([]);
@@ -37,7 +76,11 @@ export default function CreatePublicationPage() {
     try {
       setFetching(true);
       const response = await publicationsAPI.getAll();
-      setPublicaciones(response.data || []);
+      const currentUser = getCurrentUser();
+      const ownPublications = (response.data || []).filter((publication: any) =>
+        isOwnPublication(publication, currentUser)
+      );
+      setPublicaciones(ownPublications);
     } catch (err: any) {
       console.error("Error cargando publicaciones:", err);
       setPublicaciones([]);
