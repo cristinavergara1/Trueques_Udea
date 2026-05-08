@@ -14,8 +14,16 @@ function getCurrentUser() {
 
   try {
     const parsed = JSON.parse(rawUser);
-    const id = Number(parsed?.id);
-    const correo = typeof parsed?.correo === "string" ? parsed.correo : "";
+    const rawId = parsed?.id ?? parsed?.idUsuario ?? parsed?.userId;
+    const id = Number(rawId);
+    const correo =
+      typeof parsed?.correo === "string"
+        ? parsed.correo
+        : typeof parsed?.correoElectronico === "string"
+          ? parsed.correoElectronico
+          : typeof parsed?.email === "string"
+            ? parsed.email
+            : "";
 
     return {
       id: Number.isNaN(id) ? null : id,
@@ -143,7 +151,7 @@ export default function CreatePublicationPage() {
         setSuccess("Publicación actualizada exitosamente");
       } else {
         // Crear
-        await publicationsAPI.create({
+        const response = await publicationsAPI.create({
           titulo: form.titulo,
           categoria: form.categoria,
           tipo: form.tipo,
@@ -152,6 +160,12 @@ export default function CreatePublicationPage() {
           imageUrl: form.imageUrl,
         });
         setSuccess("Publicación creada exitosamente");
+
+        const currentUser = getCurrentUser();
+        const createdPublication = response?.data;
+        if (createdPublication && isOwnPublication(createdPublication, currentUser)) {
+          setPublicaciones((prev) => [createdPublication, ...prev.filter((p) => p.id !== createdPublication.id)]);
+        }
       }
 
       setTimeout(() => {
