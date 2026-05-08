@@ -54,6 +54,49 @@ function isOwnPublication(publication: any, currentUser: { id: number | null; co
   return matchesId || matchesCorreo;
 }
 
+function getPublicationsCacheKey(currentUser: { id: number | null; correo: string } | null) {
+  if (!currentUser) return null;
+
+  const emailKey = currentUser.correo ? currentUser.correo.toLowerCase() : "sin-correo";
+  const idKey = currentUser.id !== null ? String(currentUser.id) : "sin-id";
+
+  return `my-publications:${idKey}:${emailKey}`;
+}
+
+function readCachedPublications(currentUser: { id: number | null; correo: string } | null) {
+  const cacheKey = getPublicationsCacheKey(currentUser);
+  if (!cacheKey) return [];
+
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCachedPublications(currentUser: { id: number | null; correo: string } | null, publications: any[]) {
+  const cacheKey = getPublicationsCacheKey(currentUser);
+  if (!cacheKey) return;
+
+  localStorage.setItem(cacheKey, JSON.stringify(publications));
+}
+
+function mergePublications(...groups: any[][]) {
+  const merged = new Map<string | number, any>();
+
+  for (const group of groups) {
+    for (const publication of group) {
+      const key = publication?.id ?? publication?.usuarioId ?? `${publication?.titulo ?? "pub"}-${publication?.creadoEn ?? "now"}`;
+      merged.set(key, publication);
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
 export default function CreatePublicationPage() {
   const navigate = useNavigate();
   const [publicaciones, setPublicaciones] = useState<any[]>([]);
@@ -85,10 +128,11 @@ export default function CreatePublicationPage() {
       setFetching(true);
       const response = await publicationsAPI.getAll();
       const currentUser = getCurrentUser();
-      const ownPublications = (response.data || []).filter((publication: any) =>
+      const serverPublications = (response.data || []).filter((publication: any) =>
         isOwnPublication(publication, currentUser)
       );
-      setPublicaciones(ownPublications);
+      const cachedPublications = readCachedPublications(currentUser);
+      setPublicaciones(mergePublications(serverPublications, cachedPublications));
     } catch (err: any) {
       console.error("Error cargando publicaciones:", err);
       setPublicaciones([]);
@@ -162,9 +206,24 @@ export default function CreatePublicationPage() {
         setSuccess("Publicación creada exitosamente");
 
         const currentUser = getCurrentUser();
-        const createdPublication = response?.data;
-        if (createdPublication && isOwnPublication(createdPublication, currentUser)) {
-          setPublicaciones((prev) => [createdPublication, ...prev.filter((p) => p.id !== createdPublication.id)]);
+        const createdPublication = {
+          ...(response?.data || {}),
+          titulo: form.titulo,
+          categoria: form.categoria,
+          tipo: form.tipo,
+          descripcion: form.descripcion,
+          condicionesIntercambio: form.condicionesIntercambio,
+          imageUrl: form.imageUrl,
+          imagen: response?.data?.imagen ?? form.imageUrl,
+          estado: response?.data?.estado ?? "Disponible",
+          usuario: response?.data?.usuario ?? (currentUser ? { id: currentUser.id, correo: currentUser.correo } : undefined),
+          usuarioId: response?.data?.usuarioId ?? currentUser?.id ?? undefined,
+        };
+
+        if (isOwnPublication(createdPublication, currentUser)) {
+          const nextPublications = mergePublications([createdPublication], publicaciones);
+          setPublicaciones(nextPublications);
+          saveCachedPublications(currentUser, nextPublications);
         }
       }
 
@@ -187,7 +246,11 @@ export default function CreatePublicationPage() {
     try {
       setLoading(true);
       await publicationsAPI.delete(id);
-      setPublicaciones(prev => prev.filter(p => p.id !== id));
+      setPublicaciones(prev => {
+        const next = prev.filter(p => p.id !== id);
+        saveCachedPublications(getCurrentUser(), next);
+        return next;
+      });
       setSuccess("Publicación eliminada exitosamente");
     } catch (err: any) {
       setError("Error al eliminar la publicación");
