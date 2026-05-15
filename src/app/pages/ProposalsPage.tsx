@@ -1,64 +1,77 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, X, Clock, Handshake } from "lucide-react";
 import Navbar from "../components/Navbar";
 import RatingModal from "../components/RatingModal";
 
-const PROPOSALS = [
-  {
-    id: 1,
-    tipo: "recibida",
-    publicacion: "Calculadora Científica Casio",
-    proponente: "Juan Pérez",
-    programa: "Ingeniería de Sistemas",
-    mensaje: "Hola! Tengo libros de cálculo y física que puedo intercambiar por tu calculadora. Son de la editorial Stewart, en muy buen estado.",
-    estado: "pendiente",
-    createdAt: "2026-04-05T10:00:00",
-    acceptedAt: null,
-    completedAt: null,
-    calificado: false,
-  },
-  {
-    id: 2,
-    tipo: "recibida",
-    publicacion: "Calculadora Científica Casio",
-    proponente: "Ana Rodríguez",
-    programa: "Matemáticas",
-    mensaje: "Me interesa mucho la calculadora. Puedo ofrecerte tutorías de álgebra lineal a cambio, tengo amplia experiencia.",
-    estado: "pendiente",
-    createdAt: "2026-04-05T10:00:00",
-    acceptedAt: null,
-    completedAt: null,
-    calificado: false,
-  },
-  {
-    id: 3,
-    tipo: "enviada",
-    publicacion: "Clases de Programación Python",
-    proponente: "María González",
-    programa: "Ingeniería de Sistemas",
-    mensaje: "Hola María! Me interesa aprender Python. A cambio puedo ofrecerte clases de diseño gráfico y Figma.",
-    estado: "aceptada",
-    createdAt: "2026-04-05T10:00:00",
-    acceptedAt: null,
-    completedAt: null,
-    calificado: false,
-  },
-  {
-    id: 4,
-    tipo: "enviada",
-    publicacion: "Libro: Cien Años de Soledad",
-    proponente: "Andrea López",
-    programa: "Literatura",
-    mensaje: "Andrea, tengo otro libro de García Márquez que podríamos intercambiar. ¿Te interesa El Amor en los Tiempos del Cólera?",
-    estado: "rechazada",
-    createdAt: "2026-04-05T10:00:00",
-    acceptedAt: null,
-    completedAt: null,
-    calificado: false,
-  },
-];
+import { proposalsAPI } from "../services/api";
 
-const ESTADO_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
+type BackendProposalDTO = {
+  id: number;
+  oferta: string;
+  mensaje?: string | null;
+  estado: string;
+  fechaCreacion?: string;
+  fechaDecision?: string | null;
+  usuarioOrigen?: string | null;
+  usuarioDestino?: string | null;
+  publicacionId?: number;
+  tituloPublicacion?: { titulo?: string } | null;
+};
+
+type ProposalView = {
+  id: number;
+  tipo: "recibida" | "enviada";
+  publicacion: string;
+  publicacionId?: number;
+  proponente: string;
+  programa: string;
+  oferta: string;
+  mensaje: string;
+  estado: "pendiente" | "aceptada" | "rechazada" | "finalizado" | "cancelado";
+  createdAt: string;
+  acceptedAt: string | null;
+  completedAt: string | null;
+  calificado: boolean;
+};
+
+function mapEstado(estado?: string): ProposalView["estado"] {
+  const normalized = (estado || "").trim().toUpperCase();
+  if (normalized === "ACEPTADA") return "aceptada";
+  if (normalized === "RECHAZADA") return "rechazada";
+  if (normalized === "PENDIENTE") return "pendiente";
+
+  // compatibilidad si algún backend envía minúsculas
+  const lower = (estado || "").trim().toLowerCase();
+  if (lower === "aceptada" || lower === "aceptado") return "aceptada";
+  if (lower === "rechazada" || lower === "rechazado") return "rechazada";
+  if (lower === "pendiente") return "pendiente";
+
+  return "pendiente";
+}
+
+function toView(dto: BackendProposalDTO, tipo: ProposalView["tipo"]): ProposalView {
+  const titulo = dto?.tituloPublicacion?.titulo || (dto.publicacionId ? `Publicación #${dto.publicacionId}` : "Publicación");
+  const createdAt = dto.fechaCreacion || new Date().toISOString();
+  const estado = mapEstado(dto.estado);
+  const proponente = tipo === "recibida" ? (dto.usuarioOrigen || "Usuario") : (dto.usuarioDestino || "Usuario");
+  return {
+    id: dto.id,
+    tipo,
+    publicacion: titulo,
+    publicacionId: dto.publicacionId,
+    proponente,
+    programa: "—",
+    oferta: dto.oferta || "",
+    mensaje: (dto.mensaje || "").toString(),
+    estado,
+    createdAt,
+    acceptedAt: dto.fechaDecision || null,
+    completedAt: null,
+    calificado: false,
+  };
+}
+
+const ESTADO_CONFIG: Record<string, { color: string; label: string; icon: ReactNode }> = {
   pendiente: { color: "bg-yellow-100 text-yellow-700", label: "Pendiente", icon: <Clock size={12} /> },
   aceptada: { color: "bg-green-100 text-green-700", label: "Aceptada", icon: <Check size={12} /> },
   rechazada: { color: "bg-red-100 text-red-700", label: "Rechazada", icon: <X size={12} /> },
@@ -69,7 +82,10 @@ const ESTADO_CONFIG: Record<string, { color: string; label: string; icon: React.
 export default function ProposalsPage() {
   const [tab, setTab] = useState<"recibidas" | "enviadas">("recibidas");
   const [filtroEstado, setFiltroEstado] = useState("todos");
-  const [proposals, setProposals] = useState(PROPOSALS);
+  const [proposals, setProposals] = useState<ProposalView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [counts, setCounts] = useState({ recibidas: 0, enviadas: 0 });
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [ratingModal, setRatingModal] = useState({
@@ -82,6 +98,50 @@ export default function ProposalsPage() {
     setShowModal(true);
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+
+    const request = tab === "recibidas" ? proposalsAPI.getReceived() : proposalsAPI.getSent();
+    request
+      .then((res) => {
+        if (cancelled) return;
+        const data = Array.isArray(res.data) ? (res.data as BackendProposalDTO[]) : [];
+        const mapped = data.map((dto) => toView(dto, tab === "recibidas" ? "recibida" : "enviada"));
+        setProposals(mapped);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setProposals([]);
+        setError(err?.response?.data?.message || "No se pudieron cargar las propuestas");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tab]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.allSettled([proposalsAPI.getReceived(), proposalsAPI.getSent()])
+      .then(([rec, sent]) => {
+        if (cancelled) return;
+        const recibidas = rec.status === "fulfilled" && Array.isArray(rec.value.data) ? rec.value.data.length : 0;
+        const enviadas = sent.status === "fulfilled" && Array.isArray(sent.value.data) ? sent.value.data.length : 0;
+        setCounts({ recibidas, enviadas });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const formatDate = (date: string) => {
   return new Date(date).toLocaleString("es-CO", {
     dateStyle: "short",
@@ -89,66 +149,55 @@ export default function ProposalsPage() {
   });
 };
 
-  const filtradas = proposals.filter((p) => {
-  const matchTab =
-    tab === "recibidas" ? p.tipo === "recibida" : p.tipo === "enviada";
+  const filtradas = useMemo(() => {
+    return proposals.filter((p) => {
+      const matchTab = tab === "recibidas" ? p.tipo === "recibida" : p.tipo === "enviada";
+      const matchEstado = filtroEstado === "todos" || p.estado === filtroEstado;
+      return matchTab && matchEstado;
+    });
+  }, [proposals, tab, filtroEstado]);
 
-  const matchEstado =
-    filtroEstado === "todos" || p.estado === filtroEstado;
+  const updateEstado = async (id: number, nuevoEstado: ProposalView["estado"]) => {
+    // Para estados soportados por backend, solo el dueño (recibidas) gestiona.
+    const isBackendManaged = nuevoEstado === "aceptada" || nuevoEstado === "rechazada";
 
-  return matchTab && matchEstado;
-});
+    if (isBackendManaged) {
+      if (tab !== "recibidas") return;
 
-  const updateEstado = (id: number, nuevoEstado: string) => {
-    if (nuevoEstado === "aceptada") {
-      const propuestaActual = proposals.find(p => p.id === id);
-      const yaExisteAceptada = proposals.some(
-        (p) =>
-          p.publicacion === propuestaActual?.publicacion &&
-          p.estado === "aceptada"
-      );
-      if (yaExisteAceptada) {
-        alert("Ya hay una propuesta aceptada para esta publicación");
+      if (nuevoEstado === "aceptada") {
+        const propuestaActual = proposals.find((p) => p.id === id);
+        const yaExisteAceptada = proposals.some(
+          (p) => p.publicacionId != null && p.publicacionId === propuestaActual?.publicacionId && p.estado === "aceptada"
+        );
+        if (yaExisteAceptada) {
+          alert("Ya hay una propuesta aceptada para esta publicación");
+          return;
+        }
+      }
+
+      try {
+        const estadoBackend = nuevoEstado === "aceptada" ? "ACEPTADA" : "RECHAZADA";
+        await proposalsAPI.manage(id, estadoBackend);
+      } catch (err: any) {
+        alert(err?.response?.data?.message || "No se pudo actualizar el estado");
         return;
       }
-      }
-  setProposals((prev) => {
-    const updated = prev.map((p) =>
-      p.id === id
-        ? {
-            ...p,
-            estado: nuevoEstado,
-            acceptedAt:
-              nuevoEstado === "aceptada"
-                ? new Date().toISOString()
-              : p.acceptedAt,
-            completedAt:
-              nuevoEstado === "finalizado"
-                ? new Date().toISOString()
-                : p.completedAt,
-          }
-      : p
-    );
-    if (nuevoEstado === "aceptada") {
-      const propuesta = prev.find((p) => p.id === id);
-      if (propuesta) {
-        const publicaciones = JSON.parse(
-          localStorage.getItem("publications") || "[]"
-        );
-        const nuevasPublicaciones = publicaciones.map((pub: any) =>
-          pub.titulo === propuesta.publicacion
-            ? { ...pub, estado: "en_proceso" }
-            : pub
-        );
-        localStorage.setItem(
-          "publications",
-          JSON.stringify(nuevasPublicaciones)
-        );
-      }
     }
-    return updated;
-  });
-};
+
+    // Actualización local de UI
+    setProposals((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              estado: nuevoEstado,
+              acceptedAt: nuevoEstado === "aceptada" ? new Date().toISOString() : p.acceptedAt,
+              completedAt: nuevoEstado === "finalizado" ? new Date().toISOString() : p.completedAt,
+            }
+          : p
+      )
+    );
+  };
 
   
   return (
@@ -170,7 +219,7 @@ export default function ProposalsPage() {
             }`}
             style={{ fontWeight: tab === "recibidas" ? 600 : 400 }}
           >
-            Recibidas ({proposals.filter((p) => p.tipo === "recibida").length})
+            Recibidas ({counts.recibidas})
           </button>
           <button
             onClick={() => setTab("enviadas")}
@@ -179,7 +228,7 @@ export default function ProposalsPage() {
             }`}
             style={{ fontWeight: tab === "enviadas" ? 600 : 400 }}
           >
-            Enviadas ({proposals.filter((p) => p.tipo === "enviada").length})
+            Enviadas ({counts.enviadas})
           </button>
         </div>
         <div className="flex gap-2 mb-6 flex-wrap">
@@ -197,6 +246,9 @@ export default function ProposalsPage() {
             </button>
           ))}
         </div>
+
+        {loading && <p className="text-sm text-gray-500">Cargando propuestas...</p>}
+        {!loading && error && <p className="text-sm text-red-500">{error}</p>}
 
         {/* List */}
         <div className="flex flex-col gap-4">
@@ -231,7 +283,16 @@ export default function ProposalsPage() {
                 </div>
 
                 <div className="bg-gray-50 rounded-lg px-4 py-3 mb-3">
-                  <p className="text-sm text-gray-600 leading-relaxed">"{p.mensaje}"</p>
+                  {p.oferta && (
+                    <p className="text-sm text-gray-700 mb-2" style={{ fontWeight: 600 }}>
+                      Oferta: <span className="text-gray-600" style={{ fontWeight: 400 }}>{p.oferta}</span>
+                    </p>
+                  )}
+                  {p.mensaje ? (
+                    <p className="text-sm text-gray-600 leading-relaxed">"{p.mensaje}"</p>
+                  ) : (
+                    <p className="text-sm text-gray-400">Sin mensaje</p>
+                  )}
                 </div>
 
                 {tab === "recibidas" && p.estado === "pendiente" && (

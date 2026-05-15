@@ -1,40 +1,32 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, Check, X } from "lucide-react";
+import { Bell, Check } from "lucide-react";
 
-const NOTIFICATIONS = [
-  {
-    id: 1,
-    tipo: "propuesta",
-    mensaje: "Juan Pérez hizo una propuesta en tu publicación 'Calculadora Científica'",
-    fecha: "Hace 2 horas",
-    leida: false,
-  },
-  {
-    id: 2,
-    tipo: "aceptada",
-    mensaje: "María González aceptó tu propuesta sobre 'Clases de Python'",
-    fecha: "Hace 5 horas",
-    leida: false,
-  },
-  {
-    id: 3,
-    tipo: "rechazo",
-    mensaje: "Tu propuesta sobre 'Libro: Cien Años de Soledad' fue rechazada",
-    fecha: "Hace 1 día",
-    leida: true,
-  },
-  {
-    id: 4,
-    tipo: "mensaje",
-    mensaje: "Nuevo mensaje de Pedro Martínez",
-    fecha: "Hace 2 días",
-    leida: true,
-  },
-];
+import { notificationsAPI } from "../services/api";
+
+type NotificationDTO = {
+  id: number;
+  tipo: string;
+  mensaje: string;
+  leida: boolean;
+  fechaCreacion?: string;
+};
+
+function formatRelativeDate(iso?: string) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "Hace un momento";
+  if (minutes < 60) return `Hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `Hace ${days} d`;
+}
 
 export default function NotificationsDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.leida).length;
@@ -49,14 +41,41 @@ export default function NotificationsDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    notificationsAPI
+      .getAll()
+      .then((res) => {
+        if (cancelled) return;
+        setNotifications(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setNotifications([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
   const markAsRead = (id: number) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, leida: true } : n))
-    );
+    notificationsAPI
+      .markRead(id)
+      .then(() => {
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
+      })
+      .catch(() => {
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
+      });
   };
 
   const markAllAsRead = () => {
+    const unread = notifications.filter((n) => !n.leida);
     setNotifications((prev) => prev.map((n) => ({ ...n, leida: true })));
+    unread.forEach((n) => {
+      notificationsAPI.markRead(n.id).catch(() => undefined);
+    });
   };
 
   return (
@@ -105,7 +124,7 @@ export default function NotificationsDropdown() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <p className="text-sm text-gray-700 leading-snug mb-1">{notif.mensaje}</p>
-                      <p className="text-xs text-gray-400">{notif.fecha}</p>
+                      <p className="text-xs text-gray-400">{formatRelativeDate(notif.fechaCreacion)}</p>
                     </div>
                     {!notif.leida && (
                       <button

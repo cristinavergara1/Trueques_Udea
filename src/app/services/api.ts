@@ -11,6 +11,19 @@ const api = axios.create({
   },
 });
 
+function getCurrentUserId(): number | null {
+  const rawUser = localStorage.getItem('user');
+  if (!rawUser) return null;
+  try {
+    const parsed = JSON.parse(rawUser);
+    const rawId = parsed?.id ?? parsed?.idUsuario ?? parsed?.userId ?? parsed?.usuarioId;
+    const id = Number(rawId);
+    return Number.isFinite(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 // Interceptor para agregar el token JWT a todas las solicitudes
 api.interceptors.request.use(
   (config) => {
@@ -133,17 +146,46 @@ export const publicationsAPI = {
 // Proposals Endpoints
 // ========================
 export const proposalsAPI = {
-  getAll: () => api.get('/propuestas'),
+  getSent: (usuarioId?: number) => {
+    const uid = usuarioId ?? getCurrentUserId();
+    if (uid == null) return Promise.reject(new Error('usuarioId no encontrado'));
+    return api.get('/propuestas/enviadas', { params: { usuarioId: uid } });
+  },
 
-  getById: (id: number) => api.get(`/propuestas/${id}`),
+  getReceived: (usuarioId?: number) => {
+    const uid = usuarioId ?? getCurrentUserId();
+    if (uid == null) return Promise.reject(new Error('usuarioId no encontrado'));
+    return api.get('/propuestas/recibidas', { params: { usuarioId: uid } });
+  },
 
-  create: (publicacionId: number, mensaje: string) =>
-    api.post('/propuestas', { publicacionId, mensaje }),
+  create: (data: { publicacionId: number; oferta: string; mensaje?: string }, usuarioId?: number) => {
+    const uid = usuarioId ?? getCurrentUserId();
+    if (uid == null) return Promise.reject(new Error('usuarioId no encontrado'));
+    return api.post('/propuestas', data, { params: { usuarioId: uid } });
+  },
 
-  update: (id: number, estado: 'aceptada' | 'rechazada' | 'pendiente') =>
-    api.put(`/propuestas/${id}`, { estado }),
+  manage: (id: number, estado: 'ACEPTADA' | 'RECHAZADA' | 'PENDIENTE', usuarioId?: number) => {
+    const uid = usuarioId ?? getCurrentUserId();
+    if (uid == null) return Promise.reject(new Error('usuarioId no encontrado'));
+    return api.put(`/propuestas/${id}`, null, { params: { usuarioId: uid, estado } });
+  },
+};
 
-  delete: (id: number) => api.delete(`/propuestas/${id}`),
+// ========================
+// Notifications Endpoints
+// ========================
+export const notificationsAPI = {
+  getAll: (usuarioId?: number) => {
+    const uid = usuarioId ?? getCurrentUserId();
+    if (uid == null) return Promise.reject(new Error('usuarioId no encontrado'));
+    return api.get('/notificaciones', { params: { usuarioId: uid } });
+  },
+
+  markRead: (id: number, usuarioId?: number) => {
+    const uid = usuarioId ?? getCurrentUserId();
+    if (uid == null) return Promise.reject(new Error('usuarioId no encontrado'));
+    return api.put(`/notificaciones/${id}/leida`, null, { params: { usuarioId: uid } });
+  },
 };
 
 // ========================

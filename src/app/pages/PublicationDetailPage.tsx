@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Tag, Flag, MessageCircle } from "lucide-react";
 import Navbar from "../components/Navbar";
 import ReportModal from "../components/ReportModal";
-import { publicationsAPI } from "../services/api";
+import { publicationsAPI, proposalsAPI } from "../services/api";
 import { getUserInitials } from "../utils/getUserInitials";
 
 type PublicationDTO = {
@@ -23,6 +23,11 @@ export default function PublicationDetailPage() {
   const params = useParams();
   const [reportModal, setReportModal] = useState(false);
   const [propuestaModal, setPropuestaModal] = useState(false);
+
+  const [oferta, setOferta] = useState("");
+  const [mensaje, setMensaje] = useState("");
+  const [sending, setSending] = useState(false);
+  const [proposalError, setProposalError] = useState("");
 
   const publicationId = useMemo(() => {
     const raw = params?.id;
@@ -67,6 +72,53 @@ export default function PublicationDetailPage() {
 
   const publisherName = publication?.nombreUsuario || "";
   const publisherInitials = getUserInitials({ nombre: publisherName });
+
+  const isClosed = useMemo(() => {
+    const estado = (publication?.estado || "").trim().toLowerCase();
+    return (
+      estado === "cerrado" ||
+      estado === "cerrada" ||
+      estado === "intercambiado" ||
+      estado === "intercambiada" ||
+      estado === "finalizado" ||
+      estado === "finalizada"
+    );
+  }, [publication?.estado]);
+
+  const submitProposal = async () => {
+    if (publicationId == null) return;
+    setProposalError("");
+
+    if (!oferta.trim()) {
+      setProposalError("La oferta es obligatoria");
+      return;
+    }
+
+    const ofertaLower = oferta.toLowerCase();
+    if (ofertaLower.includes("dinero") || ofertaLower.includes("$") || ofertaLower.includes("pesos") || ofertaLower.includes("cop") || ofertaLower.includes("plata")) {
+      setProposalError("No se permite dinero en el trueque");
+      return;
+    }
+
+    if (isClosed) {
+      setProposalError("No puedes proponer: la publicación está cerrada/intercambiada");
+      return;
+    }
+
+    try {
+      setSending(true);
+      await proposalsAPI.create({ publicacionId: publicationId, oferta: oferta.trim(), mensaje: mensaje.trim() || undefined });
+      setPropuestaModal(false);
+      setOferta("");
+      setMensaje("");
+      alert("Propuesta enviada exitosamente");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "No se pudo enviar la propuesta";
+      setProposalError(msg);
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,9 +204,13 @@ export default function PublicationDetailPage() {
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => setPropuestaModal(true)}
+                onClick={() => {
+                  setProposalError("");
+                  setPropuestaModal(true);
+                }}
                 className="flex-1 flex items-center justify-center gap-1.5 px-5 py-3 bg-[#1B6B35] text-white rounded-md text-sm hover:bg-[#155229] transition-colors"
                 style={{ fontWeight: 500 }}
+                disabled={isClosed}
               >
                 Proponer intercambio
               </button>
@@ -189,8 +245,28 @@ export default function PublicationDetailPage() {
             <p className="text-sm text-gray-500 mb-4">
               Describe qué puedes ofrecer a cambio de "{publication?.titulo}"
             </p>
+
+            {proposalError && (
+              <p className="text-sm text-red-500 mb-3">{proposalError}</p>
+            )}
+
+            <label className="block text-xs text-gray-600 mb-1" style={{ fontWeight: 500 }}>
+              Oferta (artículo/servicio/habilidad)
+            </label>
+            <input
+              value={oferta}
+              onChange={(e) => setOferta(e.target.value)}
+              placeholder="Ej: Tutorías de álgebra, libro de física, diseño en Figma..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#1B6B35] focus:ring-1 focus:ring-[#1B6B35] mb-3"
+            />
+
+            <label className="block text-xs text-gray-600 mb-1" style={{ fontWeight: 500 }}>
+              Mensaje (opcional)
+            </label>
             <textarea
-              placeholder="Ejemplo: Tengo libros de física que puedo intercambiar..."
+              value={mensaje}
+              onChange={(e) => setMensaje(e.target.value)}
+              placeholder="Explica tu propuesta (condiciones, estado, disponibilidad, etc.)"
               rows={4}
               className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#1B6B35] focus:ring-1 focus:ring-[#1B6B35] resize-none mb-4"
             />
@@ -199,18 +275,17 @@ export default function PublicationDetailPage() {
                 onClick={() => setPropuestaModal(false)}
                 className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-50 transition-colors"
                 style={{ fontWeight: 500 }}
+                disabled={sending}
               >
                 Cancelar
               </button>
               <button
-                onClick={() => {
-                  setPropuestaModal(false);
-                  alert("Propuesta enviada exitosamente");
-                }}
+                onClick={submitProposal}
                 className="flex-1 px-4 py-2.5 bg-[#1B6B35] text-white rounded-md text-sm hover:bg-[#155229] transition-colors"
                 style={{ fontWeight: 500 }}
+                disabled={sending}
               >
-                Enviar propuesta
+                {sending ? "Enviando..." : "Enviar propuesta"}
               </button>
             </div>
           </div>
